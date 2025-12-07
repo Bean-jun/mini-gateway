@@ -1,0 +1,7 @@
+configs:
+- name: server1
+  port: 7257
+- name: server2
+  port: 7258
+- name: server3
+  port: 7259

@@ -6,15 +6,11 @@ import (
 
 func main() {
 	// 加载配置
-	ConfigBlocks := NewConfigBlock(func(c *Config) {
-		c.Port = 7256
-	})
-	ConfigBlocks.AddConfig(func(c *Config) {
-		c.Port = 7257
-	})
-	ConfigBlocks.AddConfig(func(c *Config) {
-		c.Port = 7258
-	})
+	ConfigBlocks, err := LoadConfigFromYAML("config.yaml")
+	if err != nil {
+		log.Fatalln("Load config error:", err)
+		panic(err)
+	}
 
 	log.Println("Starting g-server has ->", len(ConfigBlocks.Config), "servers...")
 
