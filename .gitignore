@@ -1,0 +1,8 @@
+g-server.exe
+g-server.test.exe
+*.log
+*.tmp
+*.bak
+.DS_Store
+.vscode/
+.idea/
