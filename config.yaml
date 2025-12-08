@@ -1,7 +1,7 @@
-configs:
+server_blocks:
 - name: server1
-  port: 7257
+  port: 7256
 - name: server2
-  port: 7258
+  port: 7257
 - name: server3
-  port: 7259
+  port: 7258

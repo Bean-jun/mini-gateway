@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func Hnadler(config *Config, sign chan<- struct{}) {
+func Hnadler(config *ServerBlock, sign chan<- struct{}) {
 	defer func() {
 		// 捕获 panic 错误
 		err := recover()

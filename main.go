@@ -6,25 +6,25 @@ import (
 
 func main() {
 	// 加载配置
-	ConfigBlocks, err := LoadConfigFromYAML("config.yaml")
+	config, err := LoadConfigFromYAML("config.yaml")
 	if err != nil {
 		log.Fatalln("Load config error:", err)
 		panic(err)
 	}
 
-	log.Println("Starting g-server has ->", len(ConfigBlocks.Config), "servers...")
+	log.Println("Starting g-server has ->", len(config.ServerBlocks), "servers...")
 
-	stopSign := make(chan struct{}, len(ConfigBlocks.Config))
+	stopSign := make(chan struct{}, len(config.ServerBlocks))
 
 	// 启动服务器
-	for _, config := range ConfigBlocks.Config {
-		go Hnadler(config, stopSign)
+	for _, server_block := range config.ServerBlocks {
+		go Hnadler(server_block, stopSign)
 	}
 
 	// 等待所有服务启动完成
-	for i := 0; i < len(ConfigBlocks.Config); i++ {
+	for i := 0; i < len(config.ServerBlocks); i++ {
 		<-stopSign
-		log.Println("stop server on: ", ConfigBlocks.Config[i].Port)
+		log.Println("stop server on: ", config.ServerBlocks[i].Port)
 	}
 	log.Println("stop all g-server services!")
 }

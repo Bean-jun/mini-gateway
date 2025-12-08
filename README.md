@@ -28,13 +28,13 @@ go run main.go
 The g-server configuration is defined in a YAML file. Below is an example configuration:
 
 ```yaml
-configs:
-  - name: server1
-    port: 7257
-  - name: server2
-    port: 7258
-  - name: server3
-    port: 7259
+server_blocks:
+- name: server1
+  port: 7256
+- name: server2
+  port: 7257
+- name: server3
+  port: 7258
 ```
 
 ## Contributing
