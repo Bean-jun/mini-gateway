@@ -12,7 +12,7 @@ func main() {
 		panic(err)
 	}
 
-	log.Println("Starting g-server has ->", len(config.ServerBlocks), "servers...")
+	log.Println("Starting mini-gateway has ->", len(config.ServerBlocks), "servers...")
 
 	stopSign := make(chan struct{}, len(config.ServerBlocks))
 
@@ -26,5 +26,5 @@ func main() {
 		<-stopSign
 		log.Println("stop server on: ", config.ServerBlocks[i].Port)
 	}
-	log.Println("stop all g-server services!")
+	log.Println("stop all mini-gateway services!")
 }

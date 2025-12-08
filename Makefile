@@ -1,6 +1,6 @@
 .PHONY: clear build run
 
-EXECUTE := g-server.exe
+EXECUTE := mini-gateway.exe
 
 
 clear:

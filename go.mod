@@ -1,4 +1,4 @@
-module github.com/Bean-jun/g-server
+module github.com/Bean-jun/mini-gateway
 
 go 1.25.4
 

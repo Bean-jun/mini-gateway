@@ -15,12 +15,12 @@ func Hnadler(config *ServerBlock, sign chan<- struct{}) {
 		}
 
 		// 通知主服务, 该服务已退出
-		log.Printf("Handler g-server on port %d exited!", config.Port)
+		log.Printf("Handler mini-gateway on port %d exited!", config.Port)
 		sign <- struct{}{}
 	}()
 
 	// 启动服务日志
-	log.Printf("Handler g-server ... port: %d", config.Port)
+	log.Printf("Handler mini-gateway ... port: %d", config.Port)
 	handerSrv := NewEngine(config.Port)
 
 	// 执行服务，阻塞等待，有问题就 panic

@@ -1,5 +1,7 @@
 g-server.exe
 g-server.test.exe
+mini-gateway.exe
+mini-gateway.test.exe
 *.log
 *.tmp
 *.bak

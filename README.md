@@ -1,4 +1,4 @@
-# g-server
+# mini-gateway
 
 A simple Go HTTP server with dynamic configuration capabilities, inspired by Nginx.
 
@@ -9,15 +9,15 @@ A simple Go HTTP server with dynamic configuration capabilities, inspired by Ngi
 
 ## Installation
 
-To install g-server, use the following command:
+To install mini-gateway, use the following command:
 
 ```bash
-go install github.com/Bean-jun/g-server
+go install github.com/Bean-jun/mini-gateway
 ```
 
 ## Usage
 
-To run the g-server, execute the following command:
+To run the mini-gateway, execute the following command:
 
 ```bash
 go run main.go
@@ -25,7 +25,7 @@ go run main.go
 
 ## Configuration
 
-The g-server configuration is defined in a YAML file. Below is an example configuration:
+The mini-gateway configuration is defined in a YAML file. Below is an example configuration:
 
 ```yaml
 server_blocks:
