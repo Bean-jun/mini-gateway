@@ -1,10 +1,21 @@
 server_blocks:
-- name: server1
-  protocol: http
-  port: 7256
-- name: server2
-  protocol: tcp
-  port: 7257
-- name: server3
-  protocol: http
-  port: 7258
+  - name: server1
+    protocol: http
+    port: 7256
+    locations:
+      - path: /api/v1/.+
+        proxy_pass:
+          - schema: http
+            host: 127.0.0.1
+            port: 8080
+            weight: 1
+          - schema: http
+            host: 127.0.0.1
+            port: 8081
+            weight: 2
+  - name: server2
+    protocol: tcp
+    port: 7257
+  - name: server3
+    protocol: http
+    port: 7258

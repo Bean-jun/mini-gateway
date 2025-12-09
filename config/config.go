@@ -6,11 +6,25 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type ServerBlockLocationProxyPass struct {
+	Schema string `yaml:"schema"` // 反向代理协议
+	Host   string `yaml:"host"`   // 反向代理主机
+	Port   int    `yaml:"port"`   // 反向代理端口
+	Weight int    `yaml:"weight"` // 反向代理权重
+}
+
+// ServerBlockLocation 配置块位置
+type ServerBlockLocation struct {
+	Path      string                          `yaml:"path"`       // 匹配路径
+	ProxyPass []*ServerBlockLocationProxyPass `yaml:"proxy_pass"` // 反向代理地址
+}
+
 // ServerBlock 配置块
 type ServerBlock struct {
-	Name     string `yaml:"name"`     // 服务名称
-	Port     int    `yaml:"port"`     // go-nginx 运行端口
-	Protocol string `yaml:"protocol"` // 服务支持协议
+	Name      string                 `yaml:"name"`      // 服务名称
+	Port      int                    `yaml:"port"`      // go-nginx 运行端口
+	Protocol  string                 `yaml:"protocol"`  // 服务支持协议
+	Locations []*ServerBlockLocation `yaml:"locations"` // 反向代理配置
 }
 
 // NewServerBlock 创建配置块
