@@ -1,7 +1,10 @@
 server_blocks:
 - name: server1
+  protocol: http
   port: 7256
 - name: server2
+  protocol: tcp
   port: 7257
 - name: server3
+  protocol: http
   port: 7258

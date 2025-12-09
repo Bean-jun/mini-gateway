@@ -31,10 +31,13 @@ The mini-gateway configuration is defined in a YAML file. Below is an example co
 server_blocks:
 - name: server1
   port: 7256
+  protocol: http
 - name: server2
   port: 7257
+  protocol: tcp
 - name: server3
   port: 7258
+  protocol: http
 ```
 
 ## Contributing

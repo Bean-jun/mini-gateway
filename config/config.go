@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -8,14 +8,17 @@ import (
 
 // ServerBlock 配置块
 type ServerBlock struct {
-	Name string `yaml:"name"` // 服务名称
-	Port int    `yaml:"port"` // go-nginx 运行端口
+	Name     string `yaml:"name"`     // 服务名称
+	Port     int    `yaml:"port"`     // go-nginx 运行端口
+	Protocol string `yaml:"protocol"` // 服务支持协议
 }
 
 // NewServerBlock 创建配置块
 func NewServerBlock(opts ...func(*ServerBlock)) *ServerBlock {
 	block := &ServerBlock{
-		Port: 7256,
+		Name:     "default",
+		Port:     7256,
+		Protocol: "http",
 	}
 	for _, opt := range opts {
 		opt(block)
@@ -33,8 +36,9 @@ func NewDefaultConfig() *Config {
 	return &Config{
 		ServerBlocks: []*ServerBlock{
 			{
-				Name: "default",
-				Port: 7256,
+				Name:     "default",
+				Port:     7256,
+				Protocol: "http",
 			},
 		},
 	}
