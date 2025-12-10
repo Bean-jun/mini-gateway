@@ -8,3 +8,5 @@ mini-gateway.test.exe
 .DS_Store
 .vscode/
 .idea/
+cert.pem
+key.pem

@@ -11,8 +11,12 @@ clear:
 
 build:
 	@echo build ${EXECUTE} ...
-	@go build
+	@go build -ldflags "-w -s" -trimpath
 
 run: build
 	@echo run ${EXECUTE} ...
 	.\${EXECUTE}
+
+cert:
+	@echo generate cert ...
+	@openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
