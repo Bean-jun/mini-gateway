@@ -12,6 +12,10 @@ import (
 	"github.com/Bean-jun/mini-gateway/config"
 )
 
+const (
+	DefaultMaxBodySize int64 = 64 * 1024 * 1024 // 默认最大请求体大小1MB
+)
+
 type LoadBalancer struct {
 	proxy        []*config.ServerBlockLocationProxyPass
 	currentIndex int // 当前执行的反向代理地址索引
@@ -109,19 +113,26 @@ func (p *Pattern) MatchString(r *http.Request) (*LoadBalancer, bool) {
 }
 
 type HttpEngine struct {
-	Schema  string            // 协议
-	Port    int               // 端口
-	SSL     *config.SSLConfig // SSL 配置
-	pattern *Pattern          // 路径模式匹配
+	Schema      string            // 协议
+	Port        int               // 端口
+	SSL         *config.SSLConfig // SSL 配置
+	MaxBodySize int64             // 最大请求体大小
+	pattern     *Pattern          // 路径模式匹配
 }
 
 // NewHttpEngine 创建 HTTP 服务引擎
 func NewHttpEngine(serverBlock *config.ServerBlock) *HttpEngine {
+	max_body_size := serverBlock.MaxBodySize * 1024 * 1024
+	// 如果没有配置最大请求体大小，使用默认值
+	if max_body_size == 0 {
+		max_body_size = DefaultMaxBodySize
+	}
 	e := &HttpEngine{
-		Schema:  serverBlock.Protocol,
-		Port:    serverBlock.Port,
-		SSL:     serverBlock.SSL,
-		pattern: NewPattern(serverBlock.Locations),
+		Schema:      serverBlock.Protocol,
+		Port:        serverBlock.Port,
+		SSL:         serverBlock.SSL,
+		MaxBodySize: max_body_size,
+		pattern:     NewPattern(serverBlock.Locations),
 	}
 	return e
 }
@@ -146,6 +157,12 @@ func (e *HttpEngine) Run(ctx context.Context) error {
 func (e *HttpEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 遍历所有 Location 配置
 	log.Println("url:", r.URL.Path, "from:", r.RemoteAddr, "RawQuery:", r.URL.RawQuery)
+
+	// 检查请求体大小是否超过最大限制
+	if r.ContentLength > e.MaxBodySize {
+		http.Error(w, "Request body size exceeds maximum limit", http.StatusRequestEntityTooLarge)
+		return
+	}
 
 	lb, ok := e.pattern.MatchString(r)
 	// 如果没有找到匹配的 loadBalancer，返回 404 错误

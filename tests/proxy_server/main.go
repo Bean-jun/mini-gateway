@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 )
@@ -34,9 +35,12 @@ func main() {
 	log.Printf("server start at :%d", *port)
 	http.HandleFunc("/api/v1/user", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("request url: %s, method: %s\n", r.URL.Path, r.Method)
+		body, _ := io.ReadAll(r.Body)
 		NewResponse(200, "ok", map[string]string{
-			"url":    r.URL.Path,
-			"method": r.Method,
+			"url":       r.URL.Path,
+			"method":    r.Method,
+			"body_size": fmt.Sprintf("%d", r.ContentLength),
+			"body":      string(body),
 		}).Write(w)
 	})
 

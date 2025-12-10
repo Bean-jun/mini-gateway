@@ -2,6 +2,7 @@ server_blocks:
   - name: server1 # 服务名称
     protocol: http  # 协议类型
     port: 7256  # 监听端口
+    max_body_size: 4 # 最大请求体大小单位MB
     locations:  # 路由配置
       - path: /api/.+ # 路由路径
         proxy_pass: # 反向代理配置
