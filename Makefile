@@ -17,6 +17,9 @@ run: build
 	@echo run ${EXECUTE} ...
 	.\${EXECUTE}
 
+test:
+	@go test ./tests -v --count=1
+
 cert:
 	@echo generate cert ...
 	@openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
