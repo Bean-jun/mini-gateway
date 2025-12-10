@@ -73,25 +73,55 @@ func (lb *LoadBalancer) GetNextProxy() *config.ServerBlockLocationProxyPass {
 	return nil
 }
 
+type Pattern struct {
+	loadBalancer []*LoadBalancer
+	matchs       map[*regexp.Regexp]int
+}
+
+func NewPattern(locations []*config.ServerBlockLocation) *Pattern {
+	p := &Pattern{
+		loadBalancer: make([]*LoadBalancer, len(locations)),
+		matchs:       make(map[*regexp.Regexp]int, len(locations)),
+	}
+
+	for idx, location := range locations {
+		p.loadBalancer[idx] = NewLoadBalancer(location.ProxyPass)
+		regex := regexp.MustCompile(location.Path)
+		p.matchs[regex] = idx
+	}
+
+	return p
+}
+
+func (p *Pattern) MatchString(r *http.Request) (*LoadBalancer, bool) {
+	Index := -1
+	for regex, idx := range p.matchs {
+		if regex.MatchString(r.URL.Path) {
+			Index = idx
+			break
+		}
+	}
+	// 如果没有找到匹配的 loadBalancer
+	if Index == -1 {
+		return nil, false
+	}
+	return p.loadBalancer[Index], true
+}
+
 type HttpEngine struct {
-	Schema   string                           // 协议
-	Port     int                              // 端口
-	SSL      *config.SSLConfig                // SSL 配置
-	patterns map[*regexp.Regexp]*LoadBalancer // 存储已注册的路径
+	Schema  string            // 协议
+	Port    int               // 端口
+	SSL     *config.SSLConfig // SSL 配置
+	pattern *Pattern          // 路径模式匹配
 }
 
 // NewHttpEngine 创建 HTTP 服务引擎
 func NewHttpEngine(serverBlock *config.ServerBlock) *HttpEngine {
 	e := &HttpEngine{
-		Schema:   serverBlock.Protocol,
-		Port:     serverBlock.Port,
-		SSL:      serverBlock.SSL,
-		patterns: make(map[*regexp.Regexp]*LoadBalancer, len(serverBlock.Locations)),
-	}
-
-	// 注册所有 Location 配置
-	for _, location := range serverBlock.Locations {
-		e.patterns[regexp.MustCompile(location.Path)] = NewLoadBalancer(location.ProxyPass)
+		Schema:  serverBlock.Protocol,
+		Port:    serverBlock.Port,
+		SSL:     serverBlock.SSL,
+		pattern: NewPattern(serverBlock.Locations),
 	}
 	return e
 }
@@ -117,26 +147,15 @@ func (e *HttpEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 遍历所有 Location 配置
 	log.Println("url:", r.URL.Path, "from:", r.RemoteAddr, "RawQuery:", r.URL.RawQuery)
 
-	var found bool
-	var balancer *LoadBalancer
-
-	for pattern, loadBalancer := range e.patterns {
-		// 检查请求路径是否匹配当前 Location 的正则表达式
-		if pattern.MatchString(r.URL.Path) {
-			found = true
-			// 找到匹配的 Location，处理请求
-			balancer = loadBalancer
-			break
-		}
-	}
-
-	// 如果没有找到匹配的 Location，返回 404 错误
-	if !found {
+	lb, ok := e.pattern.MatchString(r)
+	// 如果没有找到匹配的 loadBalancer，返回 404 错误
+	if !ok {
 		http.NotFound(w, r)
 		return
 	}
 
-	target := balancer.GetNextProxy()
+	// 获取下一个反向代理地址
+	target := lb.GetNextProxy()
 	// 找到对应的反向代理地址
 	if target == nil {
 		http.Error(w, "No proxy pass configured for this location", http.StatusBadGateway)

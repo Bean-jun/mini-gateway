@@ -33,6 +33,7 @@ func main() {
 
 	log.Printf("server start at :%d", *port)
 	http.HandleFunc("/api/v1/user", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("request url: %s, method: %s\n", r.URL.Path, r.Method)
 		NewResponse(200, "ok", map[string]string{
 			"url":    r.URL.Path,
 			"method": r.Method,
@@ -40,6 +41,7 @@ func main() {
 	})
 
 	http.HandleFunc("/api/v1/ping", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("request url: %s, method: %s\n", r.URL.Path, r.Method)
 		w.Write([]byte("pong"))
 	})
 
