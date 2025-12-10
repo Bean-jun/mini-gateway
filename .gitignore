@@ -10,3 +10,4 @@ mini-gateway.test.exe
 .idea/
 cert.pem
 key.pem
+*.exe
