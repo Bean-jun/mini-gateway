@@ -6,6 +6,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type SSLConfig struct {
+	CertFile string `yaml:"cert_file"` // SSL 证书文件路径
+	KeyFile  string `yaml:"key_file"`  // SSL 密钥文件路径
+}
+
 type ServerBlockLocationProxyPass struct {
 	Schema string `yaml:"schema"` // 反向代理协议
 	Host   string `yaml:"host"`   // 反向代理主机
@@ -24,6 +29,7 @@ type ServerBlock struct {
 	Name      string                 `yaml:"name"`      // 服务名称
 	Port      int                    `yaml:"port"`      // go-nginx 运行端口
 	Protocol  string                 `yaml:"protocol"`  // 服务支持协议
+	SSL       *SSLConfig             `yaml:"ssl"`       // SSL 配置
 	Locations []*ServerBlockLocation `yaml:"locations"` // 反向代理配置
 }
 

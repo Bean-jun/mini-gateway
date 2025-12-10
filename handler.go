@@ -29,7 +29,7 @@ func Hnadler(ctx context.Context, config *config.ServerBlock, sign chan<- struct
 		e = engine.NewHttpEngine(config)
 	case "https":
 		// 启动 HTTPS 服务
-		panic("https protocol not implemented")
+		e = engine.NewHttpEngine(config)
 	case "tcp":
 		// 启动 TCP 服务
 		e = engine.NewTcpEngine(config)

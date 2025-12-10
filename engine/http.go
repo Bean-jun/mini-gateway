@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"regexp"
 
 	"github.com/Bean-jun/mini-gateway/config"
@@ -72,15 +74,23 @@ func (lb *LoadBalancer) GetNextProxy() *config.ServerBlockLocationProxyPass {
 }
 
 type HttpEngine struct {
-	config   *config.ServerBlock
+	Schema   string                           // 协议
+	Port     int                              // 端口
+	SSL      *config.SSLConfig                // SSL 配置
 	patterns map[*regexp.Regexp]*LoadBalancer // 存储已注册的路径
 }
 
 // NewHttpEngine 创建 HTTP 服务引擎
 func NewHttpEngine(serverBlock *config.ServerBlock) *HttpEngine {
-	e := &HttpEngine{config: serverBlock, patterns: make(map[*regexp.Regexp]*LoadBalancer, len(serverBlock.Locations))}
+	e := &HttpEngine{
+		Schema:   serverBlock.Protocol,
+		Port:     serverBlock.Port,
+		SSL:      serverBlock.SSL,
+		patterns: make(map[*regexp.Regexp]*LoadBalancer, len(serverBlock.Locations)),
+	}
+
 	// 注册所有 Location 配置
-	for _, location := range e.config.Locations {
+	for _, location := range serverBlock.Locations {
 		e.patterns[regexp.MustCompile(location.Path)] = NewLoadBalancer(location.ProxyPass)
 	}
 	return e
@@ -89,8 +99,17 @@ func NewHttpEngine(serverBlock *config.ServerBlock) *HttpEngine {
 // Run 启动 HTTP 服务引擎
 func (e *HttpEngine) Run(ctx context.Context) error {
 	// 启动服务日志
-	log.Printf("Handler mini-gateway HTTP server is running on port: %d", e.config.Port)
-	return http.ListenAndServe(fmt.Sprintf(":%d", e.config.Port), e)
+	log.Printf("Handler mini-gateway HTTP server is running on %s:%d", e.Schema, e.Port)
+
+	switch e.Schema {
+	case "https":
+		if e.SSL == nil {
+			panic("https protocol requires SSL configuration")
+		}
+		return http.ListenAndServeTLS(fmt.Sprintf(":%d", e.Port), e.SSL.CertFile, e.SSL.KeyFile, e)
+	default:
+		return http.ListenAndServe(fmt.Sprintf(":%d", e.Port), e)
+	}
 }
 
 // TODO: 处理请求
@@ -127,10 +146,17 @@ func (e *HttpEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 通过反向代理地址处理请求
 	log.Printf("Proxying request %s to %s:%d", r.URL.Path, target.Host, target.Port)
 
-	// r.URL.Path = e.config.ProxyPass + r.URL.Path
-	fmt.Fprintf(w, "Hello, this is mini-gateway! on port: %d\n", e.config.Port)
-	if r.URL.Query().Get("ping") == "true" {
-		fmt.Fprintf(w, "pong\n")
-		panic("error on ping")
+	url := &url.URL{
+		Scheme: target.Schema,
+		Host:   fmt.Sprintf("%s:%d", target.Host, target.Port),
 	}
+
+	proxy := httputil.NewSingleHostReverseProxy(url)
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Set("X-Server", "mini-gateway")
+		log.Println("resp.ContentLength:", resp.ContentLength)
+		return nil
+	}
+	// 转发请求
+	proxy.ServeHTTP(w, r)
 }
