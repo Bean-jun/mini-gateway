@@ -11,3 +11,4 @@ mini-gateway.test.exe
 cert.pem
 key.pem
 *.exe
+*.upload
