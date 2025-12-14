@@ -43,22 +43,24 @@ func NewFileProxyHandler(root string) ProxyHandler {
 }
 
 type LoadBalancer struct {
-	proxy        []*config.ServerBlockLocationProxyPass
-	currentIndex int // 当前执行的反向代理地址索引
-	maxWeight    int // 最大权重
+	proxyPass    []*config.ServerBlockLocationProxyPass
+	filePass     string // 静态文件根目录
+	currentIndex int    // 当前执行的反向代理地址索引
+	maxWeight    int    // 最大权重
 }
 
-func NewLoadBalancer(proxy []*config.ServerBlockLocationProxyPass) *LoadBalancer {
+func NewLoadBalancer(location *config.ServerBlockLocation) *LoadBalancer {
 	lb := &LoadBalancer{
-		proxy:        proxy,
+		proxyPass:    location.ProxyPass,
+		filePass:     location.Root,
 		currentIndex: 0,
 		maxWeight:    0,
 	}
 
-	if len(proxy) != 0 {
-		log.Printf("LoadBalancer initialized with %d proxy passes", len(proxy))
+	if location.ProxyPass != nil {
+		log.Printf("LoadBalancer initialized with %d proxy passes", len(location.ProxyPass))
 		weight := 0
-		for _, p := range proxy {
+		for _, p := range location.ProxyPass {
 			weight += p.Weight
 		}
 		lb.maxWeight = weight
@@ -67,8 +69,12 @@ func NewLoadBalancer(proxy []*config.ServerBlockLocationProxyPass) *LoadBalancer
 }
 
 func (lb *LoadBalancer) GetNextProxy() ProxyHandler {
-	if len(lb.proxy) == 0 {
+	if len(lb.proxyPass) == 0 && lb.filePass == "" {
 		return nil
+	}
+
+	if lb.filePass != "" {
+		return NewFileProxyHandler(lb.filePass)
 	}
 
 	if lb.maxWeight < 0 {
@@ -76,8 +82,8 @@ func (lb *LoadBalancer) GetNextProxy() ProxyHandler {
 	}
 
 	if lb.maxWeight == 0 {
-		proxy := lb.proxy[lb.currentIndex]
-		lb.currentIndex = (lb.currentIndex + 1) % len(lb.proxy)
+		proxy := lb.proxyPass[lb.currentIndex]
+		lb.currentIndex = (lb.currentIndex + 1) % len(lb.proxyPass)
 		return NewHttpProxyHander(proxy.Schema, proxy.Host, proxy.Port)
 	}
 
@@ -92,7 +98,7 @@ func (lb *LoadBalancer) GetNextProxy() ProxyHandler {
 	// 1,2, 3,4,5,6,7 8,9,10
 	weightCounter := 1 + (lb.currentIndex % lb.maxWeight)
 	accumulatedWeight := 0
-	for _, p := range lb.proxy {
+	for _, p := range lb.proxyPass {
 		accumulatedWeight += p.Weight
 		if accumulatedWeight >= weightCounter {
 			proxy := p
@@ -115,18 +121,7 @@ func NewPattern(locations []*config.ServerBlockLocation) *Pattern {
 	}
 
 	for idx, location := range locations {
-		// TODO 处理静态文件根目录
-		// if location.Root != ""
-		// 这种情况可以往负载均衡器里添加一个特殊的 proxy pass，表示静态文件处理
-		// 比如 http.FileServer(http.Dir(location.Root))
-		// 所以我们需要修改 LoadBalancer 结构体，添加一个字段表示是否是静态文件处理
-		// 这样在 GetNextProxy 方法中就可以判断，如果是静态文件处理，就返回 nil 或者一个特殊的值
-		// 当然。这只是一个思路，在 GetNextProxy 中我认为可以直接返回一个必须要求实现的接口
-		// 我们可以定义一个 ProxyHandler 接口，包含一个 ServeHTTP 方法
-		// 然后 LoadBalancer 里面存储的就是这个接口的实现
-		// 这样无论是反向代理还是静态文件处理，都可以通过同一个接口来处理请求
-
-		p.loadBalancer[idx] = NewLoadBalancer(location.ProxyPass)
+		p.loadBalancer[idx] = NewLoadBalancer(location)
 		regex := regexp.MustCompile(location.Path)
 		p.matchs[regex] = idx
 	}

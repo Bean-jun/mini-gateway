@@ -22,6 +22,7 @@ type ServerBlockLocationProxyPass struct {
 type ServerBlockLocation struct {
 	Path      string                          `yaml:"path"`       // 匹配路径
 	ProxyPass []*ServerBlockLocationProxyPass `yaml:"proxy_pass"` // 反向代理地址
+	Root      string                          `yaml:"root"`       // 静态文件根目录
 }
 
 // ServerBlock 配置块

@@ -14,6 +14,8 @@ server_blocks:
             host: 127.0.0.1
             port: 5001
             weight: 2
+      - path: /.* # 路由路径
+        root: html  # 静态文件根目录
   - name: server2 # 服务名称
     protocol: tcp # 协议类型
     port: 7257
