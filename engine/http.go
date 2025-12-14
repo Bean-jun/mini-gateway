@@ -13,8 +13,34 @@ import (
 )
 
 const (
-	DefaultMaxBodySize int64 = 64 * 1024 * 1024 // 默认最大请求体大小1MB
+	defaultMaxBodySize int64 = 64 * 1024 * 1024 // 默认最大请求体大小64MB
 )
+
+type ProxyHandler interface {
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
+}
+
+// NewHttpProxyHander 创建Http反向代理处理器
+func NewHttpProxyHander(schema, host string, port int) ProxyHandler {
+	url := &url.URL{
+		Scheme: schema,
+		Host:   fmt.Sprintf("%s:%d", host, port),
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(url)
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Set("X-Server", "mini-gateway")
+		log.Println("resp.ContentLength:", resp.ContentLength)
+		return nil
+	}
+	return proxy
+}
+
+// NewFileProxyHandler 创建静态文件处理器
+func NewFileProxyHandler(root string) ProxyHandler {
+	fileServer := http.FileServer(http.Dir(root))
+	return fileServer
+}
 
 type LoadBalancer struct {
 	proxy        []*config.ServerBlockLocationProxyPass
@@ -40,7 +66,7 @@ func NewLoadBalancer(proxy []*config.ServerBlockLocationProxyPass) *LoadBalancer
 	return lb
 }
 
-func (lb *LoadBalancer) GetNextProxy() *config.ServerBlockLocationProxyPass {
+func (lb *LoadBalancer) GetNextProxy() ProxyHandler {
 	if len(lb.proxy) == 0 {
 		return nil
 	}
@@ -52,7 +78,7 @@ func (lb *LoadBalancer) GetNextProxy() *config.ServerBlockLocationProxyPass {
 	if lb.maxWeight == 0 {
 		proxy := lb.proxy[lb.currentIndex]
 		lb.currentIndex = (lb.currentIndex + 1) % len(lb.proxy)
-		return proxy
+		return NewHttpProxyHander(proxy.Schema, proxy.Host, proxy.Port)
 	}
 
 	// 权重轮询算法
@@ -71,7 +97,7 @@ func (lb *LoadBalancer) GetNextProxy() *config.ServerBlockLocationProxyPass {
 		if accumulatedWeight >= weightCounter {
 			proxy := p
 			lb.currentIndex = (lb.currentIndex + 1) % lb.maxWeight
-			return proxy
+			return NewHttpProxyHander(proxy.Schema, proxy.Host, proxy.Port)
 		}
 	}
 	return nil
@@ -89,6 +115,17 @@ func NewPattern(locations []*config.ServerBlockLocation) *Pattern {
 	}
 
 	for idx, location := range locations {
+		// TODO 处理静态文件根目录
+		// if location.Root != ""
+		// 这种情况可以往负载均衡器里添加一个特殊的 proxy pass，表示静态文件处理
+		// 比如 http.FileServer(http.Dir(location.Root))
+		// 所以我们需要修改 LoadBalancer 结构体，添加一个字段表示是否是静态文件处理
+		// 这样在 GetNextProxy 方法中就可以判断，如果是静态文件处理，就返回 nil 或者一个特殊的值
+		// 当然。这只是一个思路，在 GetNextProxy 中我认为可以直接返回一个必须要求实现的接口
+		// 我们可以定义一个 ProxyHandler 接口，包含一个 ServeHTTP 方法
+		// 然后 LoadBalancer 里面存储的就是这个接口的实现
+		// 这样无论是反向代理还是静态文件处理，都可以通过同一个接口来处理请求
+
 		p.loadBalancer[idx] = NewLoadBalancer(location.ProxyPass)
 		regex := regexp.MustCompile(location.Path)
 		p.matchs[regex] = idx
@@ -125,7 +162,7 @@ func NewHttpEngine(serverBlock *config.ServerBlock) *HttpEngine {
 	max_body_size := serverBlock.MaxBodySize * 1024 * 1024
 	// 如果没有配置最大请求体大小，使用默认值
 	if max_body_size == 0 {
-		max_body_size = DefaultMaxBodySize
+		max_body_size = defaultMaxBodySize
 	}
 	e := &HttpEngine{
 		Schema:      serverBlock.Protocol,
@@ -172,27 +209,13 @@ func (e *HttpEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 获取下一个反向代理地址
-	target := lb.GetNextProxy()
+	handler := lb.GetNextProxy()
 	// 找到对应的反向代理地址
-	if target == nil {
+	if handler == nil {
 		http.Error(w, "No proxy pass configured for this location", http.StatusBadGateway)
 		return
 	}
 
-	// 通过反向代理地址处理请求
-	log.Printf("Proxying request %s to %s:%d", r.URL.Path, target.Host, target.Port)
-
-	url := &url.URL{
-		Scheme: target.Schema,
-		Host:   fmt.Sprintf("%s:%d", target.Host, target.Port),
-	}
-
-	proxy := httputil.NewSingleHostReverseProxy(url)
-	proxy.ModifyResponse = func(resp *http.Response) error {
-		resp.Header.Set("X-Server", "mini-gateway")
-		log.Println("resp.ContentLength:", resp.ContentLength)
-		return nil
-	}
-	// 转发请求
-	proxy.ServeHTTP(w, r)
+	// 调用反向代理处理请求
+	handler.ServeHTTP(w, r)
 }
