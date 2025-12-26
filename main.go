@@ -3,16 +3,15 @@ package main
 import (
 	"context"
 	"log"
-
-	"github.com/Bean-jun/mini-gateway/config"
 )
 
 func main() {
 	// 加载配置
-	config, err := config.LoadConfigFromYAML("config.yaml")
+	config, err := LoadConfigFromYAML("config.yaml")
 	if err != nil {
-		log.Fatalln("Load config error:", err)
-		panic(err)
+		log.Printf("Load config error: %v", err)
+		log.Println("Using default configuration")
+		config = NewDefaultConfig()
 	}
 
 	log.Println("Starting mini-gateway has ->", len(config.ServerBlocks), "servers...")
@@ -22,7 +21,7 @@ func main() {
 
 	// 启动服务器
 	for _, server_block := range config.ServerBlocks {
-		go Hnadler(ctx, server_block, stopSign)
+		go Handler(ctx, server_block, stopSign)
 	}
 
 	// 等待所有服务启动完成

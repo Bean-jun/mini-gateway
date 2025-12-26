@@ -1,4 +1,4 @@
-package engine
+package main
 
 import (
 	"context"
@@ -8,8 +8,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
-
-	"github.com/Bean-jun/mini-gateway/config"
 )
 
 const (
@@ -43,13 +41,13 @@ func NewFileProxyHandler(root string) ProxyHandler {
 }
 
 type LoadBalancer struct {
-	proxyPass    []*config.ServerBlockLocationProxyPass
+	proxyPass    []*ServerBlockLocationProxyPass
 	filePass     string // 静态文件根目录
 	currentIndex int    // 当前执行的反向代理地址索引
 	maxWeight    int    // 最大权重
 }
 
-func NewLoadBalancer(location *config.ServerBlockLocation) *LoadBalancer {
+func NewLoadBalancer(location *ServerBlockLocation) *LoadBalancer {
 	lb := &LoadBalancer{
 		proxyPass:    location.ProxyPass,
 		filePass:     location.Root,
@@ -114,7 +112,7 @@ type Pattern struct {
 	matchs       map[*regexp.Regexp]int
 }
 
-func NewPattern(locations []*config.ServerBlockLocation) *Pattern {
+func NewPattern(locations []*ServerBlockLocation) *Pattern {
 	p := &Pattern{
 		loadBalancer: make([]*LoadBalancer, len(locations)),
 		matchs:       make(map[*regexp.Regexp]int, len(locations)),
@@ -145,15 +143,15 @@ func (p *Pattern) MatchString(r *http.Request) (*LoadBalancer, bool) {
 }
 
 type HttpEngine struct {
-	Schema      string            // 协议
-	Port        int               // 端口
-	SSL         *config.SSLConfig // SSL 配置
-	MaxBodySize int64             // 最大请求体大小
-	pattern     *Pattern          // 路径模式匹配
+	Schema      string     // 协议
+	Port        int        // 端口
+	SSL         *SSLConfig // SSL 配置
+	MaxBodySize int64      // 最大请求体大小
+	pattern     *Pattern   // 路径模式匹配
 }
 
 // NewHttpEngine 创建 HTTP 服务引擎
-func NewHttpEngine(serverBlock *config.ServerBlock) *HttpEngine {
+func NewHttpEngine(serverBlock *ServerBlock) *HttpEngine {
 	max_body_size := serverBlock.MaxBodySize * 1024 * 1024
 	// 如果没有配置最大请求体大小，使用默认值
 	if max_body_size == 0 {
@@ -177,7 +175,10 @@ func (e *HttpEngine) Run(ctx context.Context) error {
 	switch e.Schema {
 	case "https":
 		if e.SSL == nil {
-			panic("https protocol requires SSL configuration")
+			return fmt.Errorf("https protocol requires SSL configuration")
+		}
+		if e.SSL.CertFile == "" || e.SSL.KeyFile == "" {
+			return fmt.Errorf("https protocol requires both cert_file and key_file in SSL configuration")
 		}
 		return http.ListenAndServeTLS(fmt.Sprintf(":%d", e.Port), e.SSL.CertFile, e.SSL.KeyFile, e)
 	default:

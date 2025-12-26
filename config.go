@@ -1,4 +1,4 @@
-package config
+package main
 
 import (
 	"os"
@@ -61,6 +61,12 @@ func NewDefaultConfig() *Config {
 				Name:     "default",
 				Port:     7256,
 				Protocol: "http",
+				Locations: []*ServerBlockLocation{
+					{
+						Path: "/.*",
+						Root: "html",
+					},
+				},
 			},
 		},
 	}

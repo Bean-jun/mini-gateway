@@ -1,5 +1,5 @@
 server_blocks:
-  - name: server1 # 服务名称
+  - name: server # 服务名称
     protocol: http  # 协议类型
     port: 7256  # 监听端口
     max_body_size: 4 # 最大请求体大小单位MB
@@ -16,23 +16,3 @@ server_blocks:
             weight: 2
       - path: /.* # 路由路径
         root: html  # 静态文件根目录
-  - name: server2 # 服务名称
-    protocol: tcp # 协议类型
-    port: 7257
-  - name: server3
-    protocol: https
-    port: 7258
-    ssl: # SSL 配置
-      cert_file: ./cert.pem # SSL 证书文件路径
-      key_file: ./key.pem # SSL 密钥文件路径
-    locations:
-      - path: /api/.+ # 路由路径
-        proxy_pass:
-          - schema: http
-            host: 127.0.0.1
-            port: 5000
-            weight: 1
-          - schema: http
-            host: 127.0.0.1
-            port: 5001
-            weight: 2
